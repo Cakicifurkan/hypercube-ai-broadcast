@@ -1,6 +1,3 @@
-import sys
-sys.path.insert(0, r"C:\ai_env\Lib\site-packages")  
-
 import time
 import numpy as np
 import tensorflow as tf
@@ -11,28 +8,25 @@ from tensorflow.keras import layers, models
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 
-
-def veriyi_hazirla(test_orani=0.2, random_state=42):
-    print("[1. KİŞİ - VERİ HAZIRLIĞI] Sklearn Digits (8x8) veri seti yükleniyor...")
+def prepare_data(test_size=0.2, random_state=42):
+    print("[DATA PREP] Loading Sklearn Digits (8x8) dataset...")
     digits = load_digits()
 
     X = digits.data.astype("float32") / 16.0
     y = digits.target
 
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=test_orani, random_state=random_state, stratify=y
+        X, y, test_size=test_size, random_state=random_state, stratify=y
     )
 
-    print(f"[VERİ HAZIR] Toplam: {len(X)} | X_train: {X_train.shape} | X_test: {X_test.shape}")
+    print(f"[DATA READY] Total: {len(X)} | X_train: {X_train.shape} | X_test: {X_test.shape}")
     return X_train, X_test, y_train, y_test
 
 
+def train_vgg16(X_train, X_test, y_train, y_test, epochs=10, batch_size=32):
+    start_time = time.time()
+    print("[NODE 00 - VGG16] Training started on Sklearn Digits...")
 
-def egit_vgg16(X_train, X_test, y_train, y_test, epochs=10, batch_size=32):
-    baslangic_zamani = time.time()
-    print("[THREAD 1 (00) - VGG16] Sklearn Digits üzerinde eğitim başladı...")
-
-    
     X_train_8x8 = X_train.reshape(-1, 8, 8)
     X_test_8x8 = X_test.reshape(-1, 8, 8)
 
@@ -70,37 +64,32 @@ def egit_vgg16(X_train, X_test, y_train, y_test, epochs=10, batch_size=32):
         verbose=1
     )
 
-    olasiliklar = model.predict(X_test_img, verbose=0)
-    y_pred = np.argmax(olasiliklar, axis=1)
+    probabilities = model.predict(X_test_img, verbose=0)
+    y_pred = np.argmax(probabilities, axis=1)
 
-    bitis_zamani = time.time()
-    gecen_sure = round(bitis_zamani - baslangic_zamani, 4)
+    elapsed_time = round(time.time() - start_time, 4)
 
-    sonuc = {
-        "dugum": "00 (Thread 1 - Sözcü)",
-        "model_adi": "VGG16 (Sklearn Digits 8x8)",
+    metrics = {
+        "node": "00 (Thread-00 / Coordinator)",
+        "model": "VGG16 (Sklearn Digits 8x8)",
         "accuracy": round(float(accuracy_score(y_test, y_pred)), 4),
         "precision": round(float(precision_score(y_test, y_pred, average="weighted", zero_division=0)), 4),
         "recall": round(float(recall_score(y_test, y_pred, average="weighted", zero_division=0)), 4),
         "f1_score": round(float(f1_score(y_test, y_pred, average="weighted", zero_division=0)), 4),
-        "egitim_suresi_sn": gecen_sure
+        "training_time_sec": elapsed_time
     }
 
-    print(f"[THREAD 1 (00) - VGG16] Eğitim tamamlandı! Süre: {gecen_sure} sn")
-    return sonuc
+    print(f"[NODE 00 - VGG16] Training completed in {elapsed_time} sec")
+    return metrics
 
 
 if __name__ == "__main__":
-    print("=" * 65)
-    print("1. KİŞİ MODÜL TESTİ: SKLEARN DIGITS (1.797 ÖRNEK) VE VGG16")
-    print("=" * 65)
+    X_train, X_test, y_train, y_test = prepare_data()
+    vgg16_metrics = train_vgg16(X_train, X_test, y_train, y_test, epochs=10)
 
-    X_train, X_test, y_train, y_test = veriyi_hazirla()
-    vgg16_sonuc = egit_vgg16(X_train, X_test, y_train, y_test, epochs=10)
-
-    print("\n" + "=" * 65)
-    print("📊 VGG16 PERFORMANS SONUÇLARI (DÜĞÜM 00)")
-    print("=" * 65)
-    for anahtar, deger in vgg16_sonuc.items():
-        print(f"• {anahtar:18s}: {deger}")
-    print("=" * 65)
+    print("\n" + "=" * 60)
+    print("VGG16 PERFORMANCE METRICS (NODE 00)")
+    print("=" * 60)
+    for key, value in vgg16_metrics.items():
+        print(f"• {key:18s}: {value}")
+    print("=" * 60)
